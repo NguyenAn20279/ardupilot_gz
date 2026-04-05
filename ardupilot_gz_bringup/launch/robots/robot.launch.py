@@ -26,7 +26,6 @@ from launch.actions import (
     RegisterEventHandler,
 )
 from launch.conditions import IfCondition
-from launch.conditions import UnlessCondition
 from launch.event_handlers import OnProcessStart
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
@@ -172,13 +171,14 @@ def launch_state_pub_with_bridge(
     return [robot_state_publisher, bridge, event]
 
 
-def launch_sitl_dds(context: LaunchContext) -> List[LaunchDescriptionEntity]:
+def launch_sitl_mavros(context: LaunchContext) -> List[LaunchDescriptionEntity]:
     pkg_ardupilot_sitl = get_package_share_directory("ardupilot_sitl")
 
     # Required arguments.
     name = LaunchConfiguration("robot_name").perform(context)
     command = LaunchConfiguration("command").perform(context)
     instance = int(LaunchConfiguration("instance").perform(context))
+    mavros_namespace = LaunchConfiguration("mavros_namespace").perform(context)
 
     # Optional arguments.
     sysid = LaunchConfiguration("sysid").perform(context)
@@ -187,7 +187,6 @@ def launch_sitl_dds(context: LaunchContext) -> List[LaunchDescriptionEntity]:
 
     # Ports
     port_offset = 10 * instance
-    dds_port = 2019 + port_offset
     master_port = 5760 + port_offset
     sitl_port = 5501 + port_offset
     mavlink_out = 14550 + port_offset
@@ -223,36 +222,28 @@ def launch_sitl_dds(context: LaunchContext) -> List[LaunchDescriptionEntity]:
                 ),
             ]
         ),
-        launch_arguments=sitl_arguments.items(),
-        condition=UnlessCondition(LaunchConfiguration("use_dds_agent"))
+        launch_arguments=sitl_arguments.items()
     )
 
-    # ardupilot_sitl + micro_ros_agent
-    sitl_dds_arguments = sitl_arguments.copy()
-    sitl_dds_arguments.update({
-      "micro_ros_agent_ns": name,
-      "transport": "udp4",
-      "port": f"{dds_port}",
-    })
-
-    # Include component launch files.
-    sitl_dds = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            [
-                PathJoinSubstitution(
-                    [
-                        pkg_ardupilot_sitl,
-                        "launch",
-                        "sitl_dds_udp.launch.py",
-                    ]
-                ),
-            ]
-        ),
-        launch_arguments=sitl_dds_arguments.items(),
-        condition=IfCondition(LaunchConfiguration("use_dds_agent"))
+    # Bridge ArduPilot MAVLink into ROS using MAVROS.
+    mavros = Node(
+        package="mavros",
+        executable="mavros_node",
+        namespace=mavros_namespace,
+        output="screen",
+        parameters=[
+            {
+                # MAVProxy forwards MAVLink to mavlink_out, so MAVROS must bind here.
+                "fcu_url": f"udp://:{mavlink_out}@{sim_address}:{mavlink_out}",
+                "gcs_url": "",
+                "tgt_system": int(sysid),
+                "tgt_component": 1,
+            }
+        ],
+        condition=IfCondition(LaunchConfiguration("use_mavros")),
     )
 
-    return [sitl, sitl_dds]
+    return [sitl, mavros]
 
 
 def generate_launch_arguments() -> List[LaunchDescriptionEntity]:
@@ -262,7 +253,7 @@ def generate_launch_arguments() -> List[LaunchDescriptionEntity]:
     pkg_ardupilot_sitl = get_package_share_directory("ardupilot_sitl")
 
     return [
-        # sitl_dds
+        # SITL + MAVROS
         DeclareLaunchArgument(
             "model",
             default_value="json",
@@ -282,16 +273,9 @@ def generate_launch_arguments() -> List[LaunchDescriptionEntity]:
                     pkg_ardupilot_gazebo,
                     "config",
                     "gazebo-iris-gimbal.parm",
-                )
-                + ","
-                + os.path.join(
-                    pkg_ardupilot_sitl,
-                    "config",
-                    "default_params",
-                    "dds_udp.parm",
                 ),
             ),
-            description="Set path to default params for the iris with DDS.",
+            description="Set path to default params for Gazebo SITL.",
         ),
         DeclareLaunchArgument(
             "synthetic_clock",
@@ -318,9 +302,14 @@ def generate_launch_arguments() -> List[LaunchDescriptionEntity]:
             description="If True create instance directories for the eeprom.bin.",
         ),
         DeclareLaunchArgument(
-            "use_dds_agent",
+            "use_mavros",
             default_value="True",
-            description="If True launch the micro-ros-agent.",
+            description="If True launch MAVROS.",
+        ),
+        DeclareLaunchArgument(
+            "mavros_namespace",
+            default_value="mavros",
+            description="Namespace for MAVROS topics (e.g. 'mavros' -> /mavros/*).",
         ),
         # topic_tools_tf
         DeclareLaunchArgument(
@@ -345,13 +334,7 @@ def generate_launch_arguments() -> List[LaunchDescriptionEntity]:
             default_value="arducopter",
             description="Type of vehicle to.",
             choices=[
-                "antennatracker",
-                "arducopter-heli",
-                "ardurover",
-                "blimp",
                 "arducopter",
-                "arduplane",
-                "ardusub",
             ],
         ),
         # bridge, spawn_robot
@@ -416,10 +399,11 @@ def generate_launch_description() -> LaunchDescription:
 
     opfunc_robot_state_publisher = OpaqueFunction(function=launch_state_pub_with_bridge)
     opfunc_spawn_robot = OpaqueFunction(function=launch_spawn_robot)
-    opfunc_sitl = OpaqueFunction(function=launch_sitl_dds)
+    opfunc_sitl = OpaqueFunction(function=launch_sitl_mavros)
     ld = LaunchDescription(launch_arguments)
     ld.add_action(opfunc_robot_state_publisher)
     ld.add_action(opfunc_sitl)
     ld.add_action(opfunc_spawn_robot)
 
     return ld
+

@@ -13,26 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-"""
-Launch an wild thumper rover in Gazebo and Rviz.
-
-ros2 launch ardupilot_sitl sitl_dds_udp.launch.py
-transport:=udp4
-port:=2019
-synthetic_clock:=True
-wipe:=False
-model:=json
-speedup:=1
-slave:=0
-instance:=0
-defaults:=$(ros2 pkg prefix ardupilot_sitl)
-          /share/ardupilot_sitl/config/default_params/rover-skid.parm,
-          $(ros2 pkg prefix ardupilot_sitl)
-          /share/ardupilot_sitl/config/default_params/dds_udp.parm
-sim_address:=127.0.0.1
-master:=tcp:127.0.0.1:5760
-sitl:=127.0.0.1:5501
-"""
+"""Launch an wild thumper rover in Gazebo and Rviz."""
 from typing import List
 
 import os
@@ -125,7 +106,7 @@ def generate_robot_launch_actions(context: LaunchContext, *args, **kwargs):
             "instance": LaunchConfiguration("instance"),
             "sysid": LaunchConfiguration("sysid"),
             "use_instance_dir": LaunchConfiguration("use_instance_dir"),
-            "use_dds_agent": LaunchConfiguration("use_dds_agent"),
+            "use_mavros": LaunchConfiguration("use_mavros"),
         }.items(),
     )
 
@@ -137,7 +118,7 @@ def generate_launch_arguments() -> List[DeclareLaunchArgument]:
     pkg_ardupilot_sitl = get_package_share_directory("ardupilot_sitl")
 
     return [
-        # sitl_dds
+        # SITL + MAVROS
         DeclareLaunchArgument(
             "model",
             default_value="json",
@@ -159,22 +140,8 @@ def generate_launch_arguments() -> List[DeclareLaunchArgument]:
                     "default_params",
                     "rover-skid.parm",
                 )
-                + ","
-                + os.path.join(
-                    pkg_ardupilot_sitl,
-                    "config",
-                    "default_params",
-                    "dds_udp.parm",
-                )
-                + ","
-                + os.path.join(
-                    pkg_ardupilot_sitl,
-                    "config",
-                    "default_params",
-                    "dds_use_ns.parm",
-                )
             ),
-            description="Set path to default params for the iris with DDS.",
+            description="Set path to default params for Gazebo SITL.",
         ),
         DeclareLaunchArgument(
             "synthetic_clock",
@@ -201,9 +168,9 @@ def generate_launch_arguments() -> List[DeclareLaunchArgument]:
             description="If True create instance directories for the eeprom.bin.",
         ),
         DeclareLaunchArgument(
-            "use_dds_agent",
+            "use_mavros",
             default_value="True",
-            description="If True launch the micro-ros-agent.",
+            description="If True launch MAVROS.",
         ),
         # topic_tools_tf
         DeclareLaunchArgument(

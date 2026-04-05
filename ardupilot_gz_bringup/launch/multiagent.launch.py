@@ -160,9 +160,7 @@ def generate_launch_description():
                 }
             )
 
-            # Only launch a single instance of the micro_ros_agent
-            if instance > 0:
-                drone_launch_arguments.update({"use_dds_agent": "False"})
+            drone_launch_arguments.update({"use_mavros": "True"})
 
             drone = IncludeLaunchDescription(
                 drone_lds,

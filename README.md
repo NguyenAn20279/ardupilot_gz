@@ -1,7 +1,7 @@
 # ardupilot_gz
 
 This project contains ROS 2 packages for simulating models controlled
-by ArduPilot SITL with DDS support in Gazebo.
+by ArduPilot SITL with MAVROS in Gazebo.
 
 The project is adapted from the [`ros_gz_project_template`](https://github.com/gazebosim/ros_gz_project_template) project.
 
@@ -21,7 +21,17 @@ The project is adapted from the [`ros_gz_project_template`](https://github.com/g
 
 - Install [ROS 2 Humble](https://docs.ros.org/en/humble/index.html)
 - Install [Gazebo Harmonic (default)](https://gazebosim.org/docs/harmonic) or [Gazebo Jetty](https://gazebosim.org/docs/jetty)
-- Follow the [`Installing Build Dependencies`](https://github.com/ArduPilot/ardupilot/tree/master/libraries/AP_DDS#installing-build-dependencies) section of `AP_DDS`'s README
+- Install MAVROS:
+
+```bash
+sudo apt install ros-humble-mavros ros-humble-mavros-extras
+```
+
+- Install GeographicLib datasets used by MAVROS:
+
+```bash
+sudo /opt/ros/humble/lib/mavros/install_geographiclib_datasets.sh
+```
 
 ## Install
 
@@ -67,7 +77,7 @@ colcon build
 
 ```bash
 source ./install/setup.bash
-colcon test --packages-select ardupilot_sitl ardupilot_dds_tests ardupilot_gazebo ardupilot_gz_applications ardupilot_gz_description ardupilot_gz_gazebo ardupilot_gz_bringup
+colcon test --packages-select ardupilot_sitl ardupilot_gazebo ardupilot_gz_applications ardupilot_gz_description ardupilot_gz_gazebo ardupilot_gz_bringup
 colcon test-result --all --verbose
 ```
 
@@ -85,7 +95,7 @@ source ~/ros2_ws/install/setup.sh
 ros2 launch ardupilot_gz_bringup iris_runway.launch.py rviz:=true use_gz_tf:=true
 ```
 
-#### 3. Launch a GCS (MAVPorxy)
+#### 3. Launch a GCS (MAVProxy)
 
 ```bash
 mavproxy.py --master udp:127.0.0.1:14550  --console --map
@@ -95,10 +105,10 @@ mavproxy.py --master udp:127.0.0.1:14550  --console --map
 
 ```bash
 $ ros2 topic list
-/ap/battery/battery0
-/ap/clock
-/ap/navsat/navsat0
-/ap/tf_static
+/iris/mavros/battery
+/iris/mavros/global_position/global
+/iris/mavros/imu/data
+/iris/mavros/local_position/pose
 /clicked_point
 /clock
 /goal_pose
