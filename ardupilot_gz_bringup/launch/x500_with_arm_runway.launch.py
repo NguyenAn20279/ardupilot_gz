@@ -35,7 +35,7 @@ def generate_launch_description():
     pkg_project_gazebo = get_package_share_directory("ardupilot_gz_gazebo")
     pkg_ros_gz_sim = get_package_share_directory("ros_gz_sim")
 
-    # X500 with arm.
+    # X500 with arm — forward spawn pose so Y:=0 etc. work from this launch.
     robot = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             [
@@ -49,6 +49,14 @@ def generate_launch_description():
                 ),
             ]
         ),
+        launch_arguments={
+            "x": LaunchConfiguration("x"),
+            "y": LaunchConfiguration("y"),
+            "z": LaunchConfiguration("z"),
+            "R": LaunchConfiguration("R"),
+            "P": LaunchConfiguration("P"),
+            "Y": LaunchConfiguration("Y"),
+        }.items(),
         condition=IfCondition(LaunchConfiguration("spawn_robot")),
     )
 
@@ -104,6 +112,26 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "rviz", default_value="true", description="Open RViz."
+            ),
+            DeclareLaunchArgument(
+                "x", default_value="0.0", description="Spawn x (m)."
+            ),
+            DeclareLaunchArgument(
+                "y", default_value="0.0", description="Spawn y (m)."
+            ),
+            DeclareLaunchArgument(
+                "z", default_value="0.2", description="Spawn z (m)."
+            ),
+            DeclareLaunchArgument(
+                "R", default_value="0.0", description="Spawn roll (rad)."
+            ),
+            DeclareLaunchArgument(
+                "P", default_value="0.0", description="Spawn pitch (rad)."
+            ),
+            DeclareLaunchArgument(
+                "Y",
+                default_value="0.0",
+                description="Spawn yaw (rad). Default 0; override e.g. Y:=1.57.",
             ),
             gz_sim_server,
             gz_sim_gui,

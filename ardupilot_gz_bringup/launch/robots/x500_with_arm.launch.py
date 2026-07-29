@@ -16,7 +16,6 @@
 """Launch an x500 quadcopter with 2-DOF arm in Gazebo and Rviz."""
 from typing import List
 
-import math
 import os
 import tempfile
 
@@ -206,7 +205,7 @@ def generate_launch_arguments() -> List[DeclareLaunchArgument]:
         ),
         DeclareLaunchArgument(
             "Y",
-            default_value=f"{math.radians(90)}",
+            default_value="0.0",
             description="The initial yaw angle (radians).",
         ),
     ]
