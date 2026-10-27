@@ -210,6 +210,17 @@ def launch_sitl_mavros(context: LaunchContext) -> List[LaunchDescriptionEntity]:
       "use_instance_dir": LaunchConfiguration("use_instance_dir"),
     }
 
+    # Extra serial ports.  The Pozyx pipeline uses SERIAL1 for the beacon
+    # protocol, so the device string has to be forwarded to SITL.  Only the
+    # ports that were actually requested are passed on, because SITL's
+    # launch file defaults every serial port to an empty string and an
+    # empty value would still open the port.
+    for label in range(10):
+      device = LaunchConfiguration(f"serial{label}").perform(context)
+      if device:
+        sitl_arguments[f"serial{label}"] = device
+        print(f"serial{label}:          {device}")
+
     sitl = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             [
@@ -311,6 +322,17 @@ def generate_launch_arguments() -> List[LaunchDescriptionEntity]:
             default_value="mavros",
             description="Namespace for MAVROS topics (e.g. 'mavros' -> /mavros/*).",
         ),
+        # Extra serial ports for SITL.  The Pozyx pipeline uses SERIAL1 for
+        # the beacon protocol; the default is empty, which leaves the port
+        # closed.
+        *[
+            DeclareLaunchArgument(
+                f"serial{label}",
+                default_value="",
+                description=f"Device string for SITL SERIAL{label}.",
+            )
+            for label in range(10)
+        ],
         # topic_tools_tf
         DeclareLaunchArgument(
             "use_gz_tf", default_value="true", description="Use Gazebo TF."

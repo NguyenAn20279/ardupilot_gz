@@ -99,6 +99,11 @@ def generate_robot_launch_actions(context: LaunchContext, *args, **kwargs):
             "sysid": LaunchConfiguration("sysid"),
             "use_instance_dir": LaunchConfiguration("use_instance_dir"),
             "use_mavros": LaunchConfiguration("use_mavros"),
+            # Extra serial ports, e.g. SERIAL1 for the Pozyx beacon protocol.
+            **{
+                f"serial{label}": LaunchConfiguration(f"serial{label}")
+                for label in range(10)
+            },
         }.items(),
     )
 
@@ -164,6 +169,16 @@ def generate_launch_arguments() -> List[DeclareLaunchArgument]:
             default_value="True",
             description="If True launch MAVROS.",
         ),
+        # Extra serial ports for SITL, e.g. SERIAL1 for the Pozyx beacon
+        # protocol.  Empty means the port stays closed.
+        *[
+            DeclareLaunchArgument(
+                f"serial{label}",
+                default_value="",
+                description=f"Device string for SITL SERIAL{label}.",
+            )
+            for label in range(10)
+        ],
         # topic_tools_tf
         DeclareLaunchArgument(
             "use_gz_tf", default_value="true", description="Use Gazebo TF."
