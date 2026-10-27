@@ -104,6 +104,10 @@ def generate_launch_description():
             "defaults": LaunchConfiguration("defaults"),
             # MAVROS can be switched off when only a GCS is needed.
             "use_mavros": LaunchConfiguration("use_mavros"),
+            # The name of the Gazebo world.  It has to match the <world
+            # name="..."> in the SDF file, because the bridge subscribes to
+            # /world/<world_name>/model/<robot_name>/joint_state.
+            "world_name": LaunchConfiguration("world_name"),
             # Extra serial ports for SITL, e.g. SERIAL1 for the Pozyx
             # beacon protocol.
             **{
@@ -217,6 +221,14 @@ def generate_launch_description():
                 "use_mavros",
                 default_value="true",
                 description="If True launch MAVROS.",
+            ),
+            DeclareLaunchArgument(
+                "world_name",
+                default_value="runway",
+                description=(
+                    "Name of the Gazebo world.  Must match the <world "
+                    "name=\"...\"> attribute of the loaded SDF file."
+                ),
             ),
             # Extra serial ports for SITL, e.g. SERIAL1 for the Pozyx beacon
             # protocol.  Empty means the port stays closed.
